@@ -35,7 +35,7 @@ Importo los datos locales que fueron scraped de internet de: https://eduard-mart
 
 ```{r sf,include=FALSE}
 
-sf_house <- st_as_sf(db_house, coords = c("lon", "lat"))
+sf_house <- st_as_sf(db_house, coords = c("lon", "lat"),crs=4326)
 #Creo un objeto sf para poder hacer el analisis en coordenadas.
 
 ```
@@ -51,11 +51,17 @@ Como se observa en las estadisticas descriptivas, en promedio, las propiedades d
 ### Graficos
 
 ```{r graficos, echo=FALSE}
-grafico <- ggplot(data = sf_house)+geom_sf(aes(color = price))+
+bog <- opq(bbox=getbb("Bogota Colombia")) |> 
+  add_osm_feature(key="boundary",value="administrative") |>
+  osmdata_sf()
+bog <- bog$osm_multipolygons |> subset(admin_level==9 &
+                                        !osm_id %in% 16011743:16011744)
+
+ggplot(data = sf_house)+geom_sf(mapping=aes(),data=bog) +
+  geom_sf(aes(color = price))+
   labs(title = "Mapa de Propiedades",
        color = "Precio de la propiedad")+
   scale_color_viridis(option = "C")
-grafico
 
 ggplot(db_house, aes(x = property_type, y = price)) +
   stat_summary(fun = mean, geom = "bar", fill = "black") +

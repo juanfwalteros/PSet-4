@@ -7,7 +7,7 @@ version
 require(pacman)
 
 p_load(tidyverse,rio,skimr,janitor,data.table,
-       dplyr,rvest,sf,mapview,tmaptools,ggsn,osmdata,viridis)
+         dplyr,rvest,sf,mapview,tmaptools,ggsn,osmdata,viridis)
 
 rm(list=ls())
 
@@ -63,29 +63,34 @@ export(db_house,"output/house.rds")
 
 # 2.1 Crear un objeto en sf
 
-sf_house <- st_as_sf(db_house, coords = c("lon", "lat")) #creo sf con lon y lat
-sf_house_1 <- st_as_sf(db_house, wkt = "geometry") #creo sf con geometry
+sf_house <- st_as_sf(db_house, coords = c("lon", "lat"),crs=4326) #creo sf con lon y lat
+sf_house_1 <- st_as_sf(db_house, wkt = "geometry",crs=4326) #creo sf con geometry
 
 # 2.2 Pintar mapa
 
-grafico <- ggplot(data = sf_house)+geom_sf(aes(color = price))+
+bog <- opq(bbox=getbb("Bogota Colombia")) |> 
+  add_osm_feature(key="boundary",value="administrative") |>
+  osmdata_sf()
+bog <- bog$osm_multipolygons |> subset(admin_level==9 &
+                                        !osm_id %in% 16011743:16011744)
+
+grafico <- ggplot(data = sf_house)+
+  geom_sf(mapping=aes(),data=bog) +
+  geom_sf(aes(color = price))+
   labs(title = "Mapa de Propiedades",
        color = "Precio de la propiedad")+
   scale_color_viridis(option = "C")
 
-grafico_1 <- ggplot(data = sf_house_1)+geom_sf(aes(color = price))+
-  labs(title = "Mapa de Propiedades 1",
+grafico
+
+grafico_1 <- ggplot(data = sf_house_1)+
+  geom_sf(mapping=aes(),data=bog) +
+  geom_sf(aes(color = price))+
+  labs(title = "Mapa de Propiedades",
        color = "Precio de la propiedad 1")+
   scale_color_viridis(option = "C")
 
+grafico_1 #hago dos versiones para comprobar el mismo resultado con ambas variables
+
 ggsave("mapa_propiedades.pdf", plot = grafico, device = "pdf")
 ggsave("mapa_propiedades_1.pdf", plot = grafico_1, device = "pdf")
-
-skim(db_house)
-summary(sf_house)
-ggplot(db_house, aes(x = property_type, y = price)) +
-  stat_summary(fun = mean, geom = "bar", fill = "black") +
-  labs(title = "Precio Promedio por Tipo",
-       x = "Tipo de Propiedad",
-       y = "Precio Promedio")+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
