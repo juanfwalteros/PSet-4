@@ -9,35 +9,36 @@ date: "2024-06-06"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Propiedades en Bogota DC.
 
-A continuacion se presentara un breve informe de viviendas a la venta en Bogota.
+A continuacion se presentara un breve informe de propiedades a la venta en Bogota. Se incluyen datos de su ubicacion, precio, area, entre otros.
 
-### Paquetes
-```{r paquetes}
+```{r paquetes, include=FALSE}
 
 require(pacman)
 
 p_load(tidyverse,rio,skimr,janitor,data.table,
        dplyr,rvest,sf,mapview,tmaptools,osmdata,viridis)
+# En este punto instalo los paquetes necesarios
+
+setwd("C:/Users/juanf/OneDrive - Universidad de los Andes/Octavo/Taller R/PSet-4/Pset 4")
 
 ```
-En este punto instalo los paquetes necesarios
 
 ### Datos
-```{r datos}
+```{r datos, include=FALSE}
 
-db_house <- import("house/Output.rds")
+db_house <- import("Output/house.rds")
 
 ```
 Importo los datos locales que fueron scraped de internet de: https://eduard-martinez.github.io/pset-4.html
 
-```{r sf}
+```{r sf,include=FALSE}
 
 sf_house <- st_as_sf(db_house, coords = c("lon", "lat"))
+#Creo un objeto sf para poder hacer el analisis en coordenadas.
 
 ```
-Creo un objeto sf para poder hacer el analisis en coordenadas.
 
 ### Estadisticas 
 ```{r estadisticas, echo=FALSE}
@@ -55,11 +56,7 @@ grafico <- ggplot(data = sf_house)+geom_sf(aes(color = price))+
        color = "Precio de la propiedad")+
   scale_color_viridis(option = "C")
 grafico
-```
-Como se observa en la primera grafica, se confirma que existen pocas propiedades muy costosas y la mayoria tienen un precio menor. De este modo, en el grafico o mapa, se observa como estan distrubuidas las propiedades. Es notorio que casi todos los puntos son azules, denotando que en la escala propuesta, la mayoria de observaciones son similares. De igual modo, se evidencian muy pocos puntos de otro color, donde se denota un punto amarillo en el centro del mapa y un punto rojo cercano a este. Esto indica que, como se supuso anteriormente, hay muy pocas propiedades muy caras, pero estas afectan la escala.
 
-
-```{r graficos 2, echo=FALSE}
 ggplot(db_house, aes(x = property_type, y = price)) +
   stat_summary(fun = mean, geom = "bar", fill = "black") +
   labs(title = "Precio Promedio por Tipo",
@@ -67,4 +64,5 @@ ggplot(db_house, aes(x = property_type, y = price)) +
        y = "Precio Promedio")+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-En el segundo grafico, en este caso de barras, se ilustra el precio promedio por cada tipo de propiedad. En este caso, los lotes son los de menor valor y los depositos los de mayor valor.
+
+Como se observa en la primera grafica, se confirma que existen pocas propiedades muy costosas y la mayoria tienen un precio menor. De este modo, en el grafico o mapa, se observa como estan distrubuidas las propiedades. Es notorio que casi todos los puntos son azules, denotando que en la escala propuesta, la mayoria de observaciones son similares. De igual modo, se evidencian muy pocos puntos de otro color, donde se denota un punto amarillo en el centro del mapa y un punto rojo cercano a este. Esto indica que, como se supuso anteriormente, hay muy pocas propiedades muy caras, pero estas afectan la escala. En el segundo grafico, en este caso de barras, se ilustra el precio promedio por cada tipo de propiedad. En este caso, los lotes son los de menor valor y los depositos los de mayor valor.
