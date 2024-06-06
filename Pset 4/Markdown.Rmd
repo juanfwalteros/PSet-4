@@ -1,0 +1,70 @@
+---
+x|title: "Pset 4 M"
+author: "Juan Walteros"
+output: html_document
+date: "2024-06-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+A continuacion se presentara un breve informe de viviendas a la venta en Bogota.
+
+### Paquetes
+```{r paquetes}
+
+require(pacman)
+
+p_load(tidyverse,rio,skimr,janitor,data.table,
+       dplyr,rvest,sf,mapview,tmaptools,osmdata,viridis)
+
+```
+En este punto instalo los paquetes necesarios
+
+### Datos
+```{r datos}
+
+db_house <- import("house/Output.rds")
+
+```
+Importo los datos locales que fueron scraped de internet de: https://eduard-martinez.github.io/pset-4.html
+
+```{r sf}
+
+sf_house <- st_as_sf(db_house, coords = c("lon", "lat"))
+
+```
+Creo un objeto sf para poder hacer el analisis en coordenadas.
+
+### Estadisticas 
+```{r estadisticas, echo=FALSE}
+
+summary(sf_house)
+```
+
+Como se observa en las estadisticas descriptivas, en promedio, las propiedades disponibles tienen un precio de 1.400.000.000 pesos. Esto indicaria que las propiedades vendidas son costosas en su promedio. No obstante, al observar la mediana, de 477.500.000 pesos. Esto indica que los precios estan concentrados en en lo mas bajo y existen algunos precios muy elevados que aumentan el promedio. De igual modo, es interesante ver que, en promedio, el area total es de 248 m2 y la mediana es de 109 m2. Esto tambien es indicativo de que existen propiedades que mueven el promedio hacia arriba, donde la mayoria tiene menor area.
+
+### Graficos
+
+```{r graficos, echo=FALSE}
+grafico <- ggplot(data = sf_house)+geom_sf(aes(color = price))+
+  labs(title = "Mapa de Propiedades",
+       color = "Precio de la propiedad")+
+  scale_color_viridis(option = "C")
+grafico
+```
+Como se observa en la primera grafica, se confirma que existen pocas propiedades muy costosas y la mayoria tienen un precio menor. De este modo, en el grafico o mapa, se observa como estan distrubuidas las propiedades. Es notorio que casi todos los puntos son azules, denotando que en la escala propuesta, la mayoria de observaciones son similares. De igual modo, se evidencian muy pocos puntos de otro color, donde se denota un punto amarillo en el centro del mapa y un punto rojo cercano a este. Esto indica que, como se supuso anteriormente, hay muy pocas propiedades muy caras, pero estas afectan la escala.
+
+
+```{r graficos 2, echo=FALSE}
+ggplot(db_house, aes(x = property_type, y = price)) +
+  stat_summary(fun = mean, geom = "bar", fill = "black") +
+  labs(title = "Precio Promedio por Tipo",
+       x = "Tipo de Propiedad",
+       y = "Precio Promedio")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+En el segundo grafico, en este caso de barras, se ilustra el precio promedio por cada tipo de propiedad. En este caso, los lotes son los de menor valor y los depositos los de mayor valor.

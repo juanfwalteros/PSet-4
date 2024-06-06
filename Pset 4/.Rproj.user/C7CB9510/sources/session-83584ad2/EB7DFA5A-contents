@@ -1,0 +1,525 @@
+#-------------- La Liga 2022/2023 --------------#
+install.packages("rvest")
+library(rvest)
+library(dplyr)
+
+require(pacman)
+
+p_load(tidyverse,rio,skimr,janitor,data.table)
+
+rm(list=ls())
+
+setwd("C:/Users/juanf/OneDrive - Universidad de los Andes/Octavo/Deporte/Proyecto")
+
+#Fbref
+link23 <- read_html("https://fbref.com/en/comps/12/2022-2023/2022-2023-La-Liga-Stats")
+
+liga23 <- link23 |> html_table(fill = TRUE)
+
+standard_23 <- liga23[[1]]
+standard_23 <- subset(standard_23, select = c("Squad", "Rk","Pts","GD","Attendance"))
+standard_23$Attendance <-  gsub(",", "", standard_23$Attendance)
+
+shoot_23 <- liga23[[9]]
+new_shoot_23 <- as.character(shoot_23[1, ])
+shoot_23 <- shoot_23[-1, ]
+colnames(shoot_23) <- new_shoot_23
+shoot_23 <- subset(shoot_23, select = c("Squad","Gls","Sh","SoT","SoT%","xG"))
+shoot_23 <- shoot_23 |> rename("SoTP" = "SoT%")
+
+pass_23 <- liga23[[11]]
+new_pass_23 <- as.character(pass_23[1, ])
+pass_23 <- pass_23[-1, ]
+colnames(pass_23) <- new_pass_23
+pass_23 <- subset(pass_23, select = c("Squad","Cmp","Att","Cmp%"))
+pass_23 <- pass_23 |> rename("CmpP" = "Cmp%")
+
+def_23 <- liga23[[17]]
+new_def_23 <- as.character(def_23[1,])
+def_23 <- def_23[-1,]
+colnames(def_23) <- new_def_23
+def_23 <- subset(def_23, select = c("Squad","Tkl+Int"))
+def_23 <- def_23 |> rename("TklInt" = "Tkl+Int")
+
+poss_23 <- liga23[[19]]
+new_poss_23 <- as.character(poss_23[1,])
+poss_23 <- poss_23[-1,]
+colnames(poss_23) <- new_poss_23
+poss_23 <- subset(poss_23, select = c("Squad","Poss","Touches","Def 3rd","Mid 3rd","Att 3rd"))
+poss_23 <- poss_23 |> rename("Def3rd" = "Def 3rd") |> rename("Mid3rd" = "Mid 3rd") |> rename("Att3rd" = "Att 3rd")
+
+#Transfermarkt
+value23_link <- read_html("https://www.transfermarkt.com/laliga/startseite/wettbewerb/ES1/plus/?saison_id=2022")
+value23 <- value23_link |> html_table(fill = TRUE)
+
+value23_table <- value23[[2]]
+value23_table <- value23_table[-1,]
+names(value23_table) <- make.unique(names(value23_table))
+value23_table <- subset(value23_table, select = c("Club.1", "ø market value"))
+value23_table <- value23_table  |> rename("Club" = "Club.1") 
+
+value23_table$Club <- ifelse(value23_table$Club == "Real Madrid CF", "Real Madrid",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "FC Barcelona", "Barcelona",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Atlético de Madrid", "Atlético Madrid",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Girona FC", "Girona",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Valencia CF", "Valencia",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Villarreal CF", "Villarreal",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Sevilla FC", "Sevilla",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Real Betis Balompié", "Betis",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Celta de Vigo", "Celta Vigo",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "CA Osasuna", "Osasuna",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Real Valladolid CF", "Valladolid",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Elche CF", "Elche",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Getafe CF", "Getafe",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Granada CF", "Granada",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "RCD Mallorca", "Mallorca",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "UD Almería", "Almería",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Cádiz CF", "Cádiz",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "RCD Espanyol Barcelona", "Espanyol",value23_table$Club)
+value23_table$Club <- ifelse(value23_table$Club == "Athletic Bilbao", "Athletic Club",value23_table$Club)
+
+
+value23_table <- value23_table |> rename("Value24" = "ø market value")
+value23_table <- value23_table |> rename("Squad" = "Club")
+value23_table$Value24 <- gsub("€", "", value23_table$Value24) 
+value23_table$Value24 <- gsub("m", "", value23_table$Value24) 
+value23_table$Value24 <- gsub(",", ".", value23_table$Value24) 
+value23_table$Value24 <- as.numeric(value23_table$Value24) 
+value23_table$Value24 <- value23_table$Value24 * 1e6
+
+liga23 <- left_join(x = standard_23, y = shoot_23, by = c("Squad"))
+liga23 <- left_join(x = liga23, y = pass_23, by = c("Squad"))
+liga23 <- left_join(x = liga23, y = def_23, by = c("Squad"))
+liga23 <- left_join(x = liga23, y = poss_23, by = c("Squad"))
+liga23 <- left_join(x = liga23, y = value23_table, by = c("Squad"))
+liga23$League <- "LaLiga"
+liga23$Year <- 2023
+
+liga23 <- liga23 |> mutate(across(5:19, ~ as.numeric(.)))
+
+export(liga23,"23/liga23.dta")
+
+#Inglaterra 2023
+rm(list=ls())
+
+setwd("C:/Users/juanf/OneDrive - Universidad de los Andes/Octavo/Deporte/Proyecto")
+
+#Fbref
+link23 <- read_html("https://fbref.com/en/comps/9/2022-2023/2022-2023-Premier-League-Stats")
+
+premier23 <- link23 |> html_table(fill = TRUE)
+
+standard_24 <- premier23[[1]]
+standard_24 <- subset(standard_24, select = c("Squad", "Rk","Pts","GD","Attendance"))
+standard_24$Attendance <-  gsub(",", "", standard_24$Attendance)
+
+shoot_24 <- premier23[[9]]
+new_shoot_24 <- as.character(shoot_24[1, ])
+shoot_24 <- shoot_24[-1, ]
+colnames(shoot_24) <- new_shoot_24
+shoot_24 <- subset(shoot_24, select = c("Squad","Gls","Sh","SoT","SoT%","xG"))
+shoot_24 <- shoot_24 |> rename("SoTP" = "SoT%")
+
+pass_24 <- premier23[[11]]
+new_pass_24 <- as.character(pass_24[1, ])
+pass_24 <- pass_24[-1, ]
+colnames(pass_24) <- new_pass_24
+pass_24 <- subset(pass_24, select = c("Squad","Cmp","Att","Cmp%"))
+pass_24 <- pass_24 |> rename("CmpP" = "Cmp%")
+
+def_24 <- premier23[[17]]
+new_def_24 <- as.character(def_24[1,])
+def_24 <- def_24[-1,]
+colnames(def_24) <- new_def_24
+def_24 <- subset(def_24, select = c("Squad","Tkl+Int"))
+def_24 <- def_24 |> rename("TklInt" = "Tkl+Int")
+
+poss_24 <- premier23[[19]]
+new_poss_24 <- as.character(poss_24[1,])
+poss_24 <- poss_24[-1,]
+colnames(poss_24) <- new_poss_24
+poss_24 <- subset(poss_24, select = c("Squad","Poss","Touches","Def 3rd","Mid 3rd","Att 3rd"))
+poss_24 <- poss_24 |> rename("Def3rd" = "Def 3rd") |> rename("Mid3rd" = "Mid 3rd") |> rename("Att3rd" = "Att 3rd")
+
+#Transfermarkt
+value24_link <- read_html("https://www.transfermarkt.com/premier-league/startseite/wettbewerb/GB1/plus/?saison_id=2022")
+value24 <- value24_link |> html_table(fill = TRUE)
+
+value24_table <- value24[[2]]
+value24_table <- value24_table[-1,]
+names(value24_table) <- make.unique(names(value24_table))
+value24_table <- subset(value24_table, select = c("Club.1", "ø market value"))
+value24_table <- value24_table |> rename("Value24" = "ø market value")
+value24_table <- value24_table  |> rename("Club" = "Club.1") 
+
+
+
+value24_table$Club <- ifelse(value24_table$Club == "Arsenal FC", "Arsenal",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Chelsea FC", "Chelsea",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Liverpool FC", "Liverpool",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Tottenham Hotspur", "Tottenham",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Brighton & Hove Albion", "Brighton",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Manchester United", "Manchester Utd",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Newcastle United","Newcastle Utd",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "West Ham United", "West Ham",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Brentford FC", "Brentford",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "AFC Bournemouth", "Bournemouth",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Everton FC", "Everton",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Fulham FC", "Fulham",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Nottingham Forest", "Nott'ham Forest",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Wolverhampton Wanderers", "Wolves",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Burnley FC", "Burnley",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Southampton FC", "Southampton",value24_table$Club)
+
+value24_table <- value24_table |> 
+  rename("Squad" = "Club")
+
+value24_table$Value24 <- gsub("€", "", value24_table$Value24)
+value24_table$Value24 <- gsub("bn", "", value24_table$Value24)
+value24_table$Value24 <- gsub("m", "", value24_table$Value24)
+value24_table$Value24 <- gsub(",", ".", value24_table$Value24) 
+value24_table$Value24 <- as.numeric(value24_table$Value24)
+value24_table <- value24_table %>%
+  mutate(Value24 = if_else(Squad %in% 
+                             c("Manchester City", "Arsenal"), Value24 * 1000, Value24))
+
+premier23 <- left_join(x = standard_24, y = shoot_24, by = c("Squad"))
+premier23 <- left_join(x = premier23, y = pass_24, by = c("Squad"))
+premier23 <- left_join(x = premier23, y = def_24, by = c("Squad"))
+premier23 <- left_join(x = premier23, y = poss_24, by = c("Squad"))
+premier23 <- left_join(x = premier23, y = value24_table, by = c("Squad"))
+premier23$League <- "Premier"
+premier23$Year <- 2023
+
+premier23 <- premier23 |> mutate(across(5:19, ~ as.numeric(.)))
+
+export(premier23,"23/premier23.dta")
+
+#Bundesliga 2023
+library(stringi)
+
+rm(list=ls())
+
+setwd("C:/Users/juanf/OneDrive - Universidad de los Andes/Octavo/Deporte/Proyecto")
+
+#Fbref
+link24 <- read_html("https://fbref.com/en/comps/20/2022-2023/2022-2023-Bundesliga-Stats")
+
+bundes23 <- link24 |> html_table(fill = TRUE)
+
+standard_24 <- bundes23[[1]]
+standard_24 <- subset(standard_24, select = c("Squad", "Rk","Pts","GD","Attendance"))
+standard_24$Attendance <-  gsub(",", "", standard_24$Attendance)
+
+shoot_24 <- bundes23[[9]]
+new_shoot_24 <- as.character(shoot_24[1, ])
+shoot_24 <- shoot_24[-1, ]
+colnames(shoot_24) <- new_shoot_24
+shoot_24 <- subset(shoot_24, select = c("Squad","Gls","Sh","SoT","SoT%","xG"))
+shoot_24 <- shoot_24 |> rename("SoTP" = "SoT%")
+
+pass_24 <- bundes23[[11]]
+new_pass_24 <- as.character(pass_24[1, ])
+pass_24 <- pass_24[-1, ]
+colnames(pass_24) <- new_pass_24
+pass_24 <- subset(pass_24, select = c("Squad","Cmp","Att","Cmp%"))
+pass_24 <- pass_24 |> rename("CmpP" = "Cmp%")
+
+def_24 <- bundes23[[17]]
+new_def_24 <- as.character(def_24[1,])
+def_24 <- def_24[-1,]
+colnames(def_24) <- new_def_24
+def_24 <- subset(def_24, select = c("Squad","Tkl+Int"))
+def_24 <- def_24 |> rename("TklInt" = "Tkl+Int")
+
+poss_24 <- bundes23[[19]]
+new_poss_24 <- as.character(poss_24[1,])
+poss_24 <- poss_24[-1,]
+colnames(poss_24) <- new_poss_24
+poss_24 <- subset(poss_24, select = c("Squad","Poss","Touches","Def 3rd","Mid 3rd","Att 3rd"))
+poss_24 <- poss_24 |> rename("Def3rd" = "Def 3rd") |> rename("Mid3rd" = "Mid 3rd") |> rename("Att3rd" = "Att 3rd")
+
+#Transfermarkt
+value24_link <- read_html("https://www.transfermarkt.com/bundesliga/startseite/wettbewerb/L1/plus/?saison_id=2022")
+value24 <- value24_link |> html_table(fill = TRUE)
+
+value24_table <- value24[[2]]
+value24_table <- value24_table[-1,]
+names(value24_table) <- make.unique(names(value24_table))
+value24_table <- subset(value24_table, select = c("Club.1", "ø market value"))
+value24_table <- value24_table |> rename("Value24" = "ø market value")
+value24_table <- value24_table  |> rename("Club" = "Club.1") 
+
+value24_table$Club <- as.character(value24_table$Club)
+
+value24_table$Club <- ifelse(value24_table$Club == "Bayern Munich", "Bayern Munich",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "VfB Stuttgart", "Stuttgart",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Bayer 04 Leverkusen", "Leverkusen",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Borussia Dortmund", "Dortmund",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Eintracht Frankfurt", "Eint Frankfurt",value24_table$Club)
+value24_table$Club <- stri_replace_all_fixed(value24_table$Club, "Eintracht Fráncfort", "Eint Frankfurt")
+value24_table$Club <- stri_replace_all_fixed(value24_table$Club, "VfB Stuttgart", "Stuttgart")
+value24_table$Club <- stri_replace_all_fixed(value24_table$Club, "FC Schalke 04", "Schalke 04")
+
+value24_table$Club <- ifelse(value24_table$Club == "VfL Wolfsburg", "Wolfsburg",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "SC Freiburg","Freiburg",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Borussia Mönchengladbach", "Gladbach",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "1.FC Union Berlin", "Union Berlin",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "TSG 1899 Hoffenheim", "Hoffenheim",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "FC Augsburg", "Augsburg",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "1.FSV Mainz 05", "Mainz 05",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "SV Werder Bremen", "Werder Bremen",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "1.FC Köln", "Köln",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "VfL Bochum", "Bochum",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "1.FC Heidenheim 1846", "Heidenheim",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "SV Darmstadt 98", "Darmstadt 98",value24_table$Club)
+
+str(value24_table$Club)
+
+value24_table <- value24_table |> 
+  rename("Squad" = "Club")
+
+value24_table$Value24 <- gsub("€", "", value24_table$Value24)
+value24_table$Value24 <- gsub("bn", "", value24_table$Value24)
+value24_table$Value24 <- gsub("m", "", value24_table$Value24)
+value24_table$Value24 <- gsub(",", ".", value24_table$Value24) 
+value24_table$Value24 <- as.numeric(value24_table$Value24)
+value24_table$Value24 <- value24_table$Value24 * 1e6
+
+bundes23 <- left_join(x = standard_24, y = shoot_24, by = c("Squad"))
+bundes23 <- left_join(x = bundes23, y = pass_24, by = c("Squad"))
+bundes23 <- left_join(x = bundes23, y = def_24, by = c("Squad"))
+bundes23 <- left_join(x = bundes23, y = poss_24, by = c("Squad"))
+bundes23 <- left_join(x = bundes23, y = value24_table, by = c("Squad"))
+bundes23$League <- "Bundesliga"
+bundes23$Year <- 2023
+
+bundes23 <- bundes23 |> mutate(across(5:19, ~ as.numeric(.)))
+
+export(bundes23,"23/bundes23.dta")
+
+#Serie A 2024
+library(stringi)
+
+rm(list=ls())
+
+setwd("C:/Users/juanf/OneDrive - Universidad de los Andes/Octavo/Deporte/Proyecto")
+
+#Fbref
+link24 <- read_html("https://fbref.com/en/comps/11/2022-2023/2022-2023-Serie-A-Stats")
+
+serie24 <- link24 |> html_table(fill = TRUE)
+
+standard_24 <- serie24[[1]]
+standard_24 <- subset(standard_24, select = c("Squad", "Rk","Pts","GD","Attendance"))
+standard_24$Attendance <-  gsub(",", "", standard_24$Attendance)
+
+shoot_24 <- serie24[[9]]
+new_shoot_24 <- as.character(shoot_24[1, ])
+shoot_24 <- shoot_24[-1, ]
+colnames(shoot_24) <- new_shoot_24
+shoot_24 <- subset(shoot_24, select = c("Squad","Gls","Sh","SoT","SoT%","xG"))
+shoot_24 <- shoot_24 |> rename("SoTP" = "SoT%")
+
+pass_24 <- serie24[[11]]
+new_pass_24 <- as.character(pass_24[1, ])
+pass_24 <- pass_24[-1, ]
+colnames(pass_24) <- new_pass_24
+pass_24 <- subset(pass_24, select = c("Squad","Cmp","Att","Cmp%"))
+pass_24 <- pass_24 |> rename("CmpP" = "Cmp%")
+
+def_24 <- serie24[[17]]
+new_def_24 <- as.character(def_24[1,])
+def_24 <- def_24[-1,]
+colnames(def_24) <- new_def_24
+def_24 <- subset(def_24, select = c("Squad","Tkl+Int"))
+def_24 <- def_24 |> rename("TklInt" = "Tkl+Int")
+
+poss_24 <- serie24[[19]]
+new_poss_24 <- as.character(poss_24[1,])
+poss_24 <- poss_24[-1,]
+colnames(poss_24) <- new_poss_24
+poss_24 <- subset(poss_24, select = c("Squad","Poss","Touches","Def 3rd","Mid 3rd","Att 3rd"))
+poss_24 <- poss_24 |> rename("Def3rd" = "Def 3rd") |> rename("Mid3rd" = "Mid 3rd") |> rename("Att3rd" = "Att 3rd")
+
+#Transfermarkt
+value24_link <- read_html("https://www.transfermarkt.com/serie-a/startseite/wettbewerb/IT1/plus/?saison_id=2022")
+value24 <- value24_link |> html_table(fill = TRUE)
+
+value24_table <- value24[[2]]
+value24_table <- value24_table[-1,]
+names(value24_table) <- make.unique(names(value24_table))
+value24_table <- subset(value24_table, select = c("Club.1", "ø market value"))
+value24_table <- value24_table |> rename("Value24" = "ø market value")
+value24_table <- value24_table  |> rename("Club" = "Club.1") 
+
+value24_table$Club <- as.character(value24_table$Club)
+
+value24_table$Club <- ifelse(value24_table$Club == "Inter Milan", "Inter",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "AC Milan", "Milan",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Juventus FC", "Juventus",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "SSC Napoli", "Napoli",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Atalanta BC", "Atalanta",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Bologna FC 1909", "Bologna",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "AS Roma","Roma",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "SS Lazio", "Lazio",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Torino FC", "Torino",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Génova", "Genoa",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "AC Monza", "Monza",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "US Lecce", "Lecce",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "FC Empoli", "Empoli",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Frosinone Calcio", "Frosinone",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "US Sassuolo", "Sassuolo",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "US Salernitana 1919", "Salernitana",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "UC Sampdoria", "Sampdoria",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "US Cremonese", "Cremonese",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "ACF Fiorentina", "Fiorentina",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Udinese Calcio", "Udinese",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Spezia Calcio", "Spezia",value24_table$Club)
+
+str(value24_table$Club)
+
+value24_table <- value24_table |> 
+  rename("Squad" = "Club")
+
+value24_table$Value24 <- gsub("€", "", value24_table$Value24)
+value24_table$Value24 <- gsub("bn", "", value24_table$Value24)
+value24_table$Value24 <- gsub("m", "", value24_table$Value24)
+value24_table$Value24 <- gsub(",", ".", value24_table$Value24) 
+value24_table$Value24 <- as.numeric(value24_table$Value24)
+value24_table$Value24 <- value24_table$Value24 * 1e6
+
+serie23 <- left_join(x = standard_24, y = shoot_24, by = c("Squad"))
+serie23 <- left_join(x = serie23, y = pass_24, by = c("Squad"))
+serie23 <- left_join(x = serie23, y = def_24, by = c("Squad"))
+serie23 <- left_join(x = serie23, y = poss_24, by = c("Squad"))
+serie23 <- left_join(x = serie23, y = value24_table, by = c("Squad"))
+serie23$League <- "Serie A"
+serie23$Year <- 2023
+
+serie23 <- serie23 |> mutate(across(5:19, ~ as.numeric(.)))
+
+export(serie23,"23/serie23.dta")
+
+#Ligue 1 2024
+library(stringi)
+
+rm(list=ls())
+
+setwd("C:/Users/juanf/OneDrive - Universidad de los Andes/Octavo/Deporte/Proyecto")
+
+#Fbref
+link24 <- read_html("https://fbref.com/en/comps/13/2022-2023/2022-2023-Ligue-1-Stats")
+
+ligue24 <- link24 |> html_table(fill = TRUE)
+
+standard_24 <- ligue24[[1]]
+standard_24 <- subset(standard_24, select = c("Squad", "Rk","Pts","GD","Attendance"))
+standard_24$Attendance <-  gsub(",", "", standard_24$Attendance)
+
+shoot_24 <- ligue24[[9]]
+new_shoot_24 <- as.character(shoot_24[1, ])
+shoot_24 <- shoot_24[-1, ]
+colnames(shoot_24) <- new_shoot_24
+shoot_24 <- subset(shoot_24, select = c("Squad","Gls","Sh","SoT","SoT%","xG"))
+shoot_24 <- shoot_24 |> rename("SoTP" = "SoT%")
+
+pass_24 <- ligue24[[11]]
+new_pass_24 <- as.character(pass_24[1, ])
+pass_24 <- pass_24[-1, ]
+colnames(pass_24) <- new_pass_24
+pass_24 <- subset(pass_24, select = c("Squad","Cmp","Att","Cmp%"))
+pass_24 <- pass_24 |> rename("CmpP" = "Cmp%")
+
+def_24 <- ligue24[[17]]
+new_def_24 <- as.character(def_24[1,])
+def_24 <- def_24[-1,]
+colnames(def_24) <- new_def_24
+def_24 <- subset(def_24, select = c("Squad","Tkl+Int"))
+def_24 <- def_24 |> rename("TklInt" = "Tkl+Int")
+
+poss_24 <- ligue24[[19]]
+new_poss_24 <- as.character(poss_24[1,])
+poss_24 <- poss_24[-1,]
+colnames(poss_24) <- new_poss_24
+poss_24 <- subset(poss_24, select = c("Squad","Poss","Touches","Def 3rd","Mid 3rd","Att 3rd"))
+poss_24 <- poss_24 |> rename("Def3rd" = "Def 3rd") |> rename("Mid3rd" = "Mid 3rd") |> rename("Att3rd" = "Att 3rd")
+
+#Transfermarkt
+value24_link <- read_html("https://www.transfermarkt.com/ligue-1/startseite/wettbewerb/FR1/plus/?saison_id=2022")
+value24 <- value24_link |> html_table(fill = TRUE)
+
+value24_table <- value24[[2]]
+value24_table <- value24_table[-1,]
+names(value24_table) <- make.unique(names(value24_table))
+value24_table <- subset(value24_table, select = c("Club.1", "ø market value"))
+value24_table <- value24_table |> rename("Value24" = "ø market value")
+value24_table <- value24_table  |> rename("Club" = "Club.1") 
+
+value24_table$Club <- as.character(value24_table$Club)
+
+value24_table$Club <- ifelse(value24_table$Club == "Paris Saint-Germain", "Paris S-G",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "AS Monaco", "Monaco",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Juventus de Turín", "Juventus",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Stade Brestois 29", "Brest",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "LOSC Lille", "Lille",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "OGC Nice", "Nice",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Olympique Lyon","Lyon",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "RC Lens", "Lens",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Olympique Marseille", "Marseille",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Stade Reims", "Reims",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Stade Rennais FC", "Rennes",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "FC Toulouse", "Toulouse",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Montpellier HSC", "Montpellier",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Racing Club de Estrasburgo", "Strasbourg",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "FC Nantes", "Nantes",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Le Havre AC", "Le Havre",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "FC Metz", "Metz",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "FC Lorient", "Lorient",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Clermont Foot 63", "Clermont Foot",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "RC Strasbourg Alsace", "Strasbourg",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "AJ Auxerre", "Auxerre",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "AC Ajaccio", "Ajaccio",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "AC Ajaccio", "Ajaccio",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "ESTAC Troyes", "Troyes",value24_table$Club)
+value24_table$Club <- ifelse(value24_table$Club == "Angers SCO", "Angers",value24_table$Club)
+
+str(value24_table$Club)
+
+value24_table <- value24_table |> 
+  rename("Squad" = "Club")
+
+value24_table$Value24 <- gsub("€", "", value24_table$Value24)
+value24_table$Value24 <- gsub("bn", "", value24_table$Value24)
+value24_table$Value24 <- gsub("m", "", value24_table$Value24)
+value24_table$Value24 <- gsub(",", ".", value24_table$Value24) 
+value24_table$Value24 <- as.numeric(value24_table$Value24)
+value24_table$Value24 <- value24_table$Value24 * 1e6
+
+ligue24 <- left_join(x = standard_24, y = shoot_24, by = c("Squad"))
+ligue24 <- left_join(x = ligue24, y = pass_24, by = c("Squad"))
+ligue24 <- left_join(x = ligue24, y = def_24, by = c("Squad"))
+ligue24 <- left_join(x = ligue24, y = poss_24, by = c("Squad"))
+ligue24 <- left_join(x = ligue24, y = value24_table, by = c("Squad"))
+ligue24$League <- "Ligue 1"
+ligue24$Year <- 2023
+
+ligue23 <- ligue24 |> mutate(across(5:19, ~ as.numeric(.)))
+
+export(ligue23,"23/ligue23.dta")
+
+liga23 <- import("23/liga23.dta")
+premier23 <- import("23/premier23.dta")
+bundes23 <- import("23/bundes23.dta")
+serie23 <- import("23/serie23.dta")
+ligue23 <- import("23/ligue23.dta")
+base24  <- import("24/base24.dta")
+
+base23 <- rbind(liga23,premier23,bundes23,serie23,ligue23)
+
+base23 <- base23 |> rename("Value" = "Value24")
+base24 <- base24 |> rename("Value" = "Value24")
+
+base <- rbind(base23,base24)
+export(base,"Proyecto/base.dta")
+

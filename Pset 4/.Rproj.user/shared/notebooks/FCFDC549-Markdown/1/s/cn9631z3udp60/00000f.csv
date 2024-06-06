@@ -1,0 +1,3 @@
+"0",""
+"0","sf_house <- st_as_sf(db_house, coords = c(""lon"", ""lat""))"
+"0",""

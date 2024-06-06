@@ -1,0 +1,6 @@
+"0",""
+"0","require(pacman)"
+"0",""
+"0","p_load(tidyverse,rio,skimr,janitor,data.table,"
+"0","       dplyr,rvest,sf,mapview,tmaptools,osmdata,viridis)"
+"0",""
