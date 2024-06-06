@@ -57,7 +57,7 @@ db_house <- subset(db_house, select = c("V1", "rooms","bedrooms",
                                         "geometry","property_type"))
 
 
-export(db_house,"house/Output.rds")
+export(db_house,"output/house.rds")
 
 # 2. Manipular informacion en GIS
 

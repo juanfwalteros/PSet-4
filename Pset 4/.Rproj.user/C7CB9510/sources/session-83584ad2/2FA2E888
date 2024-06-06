@@ -3,24 +3,24 @@
     "path": "C:/Users/juanf/OneDrive - Universidad de los Andes/Octavo/Taller R/PSet-4/Pset 4/Code/202022380.R",
     "project_path": "Code/202022380.R",
     "type": "r_source",
-    "hash": "3186705679",
+    "hash": "0",
     "contents": "",
-    "dirty": false,
+    "dirty": true,
     "created": 1717610295285.0,
     "source_on_save": false,
     "relative_order": 2,
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "90,58",
-        "scrollLine": "53"
+        "cursorPosition": "59,0",
+        "scrollLine": "25"
     },
     "folds": "",
     "lastKnownWriteTime": 1717647645,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1717647645097,
+    "last_content_update": 1717648680229,
     "read_only": false,
     "read_only_alternatives": []
 }
