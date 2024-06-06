@@ -94,12 +94,3 @@ grafico_1 #hago dos versiones para comprobar el mismo resultado con ambas variab
 
 ggsave("mapa_propiedades.pdf", plot = grafico, device = "pdf")
 ggsave("mapa_propiedades_1.pdf", plot = grafico_1, device = "pdf")
-
-skim(db_house)
-summary(sf_house)
-ggplot(db_house, aes(x = property_type, y = price)) +
-  stat_summary(fun = mean, geom = "bar", fill = "black") +
-  labs(title = "Precio Promedio por Tipo",
-       x = "Tipo de Propiedad",
-       y = "Precio Promedio")+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
